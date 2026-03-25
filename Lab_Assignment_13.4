@@ -1,0 +1,437 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/mithunareddy/NLP/blob/main/Lab_Assignment_13.4\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!pip install nltk"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2jsv0tIhM9dQ",
+        "outputId": "2b5de347-6bc6-4969-cd17-b27e502d1546"
+      },
+      "execution_count": 1,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: nltk in /usr/local/lib/python3.12/dist-packages (3.9.1)\n",
+            "Requirement already satisfied: click in /usr/local/lib/python3.12/dist-packages (from nltk) (8.3.1)\n",
+            "Requirement already satisfied: joblib in /usr/local/lib/python3.12/dist-packages (from nltk) (1.5.3)\n",
+            "Requirement already satisfied: regex>=2021.8.3 in /usr/local/lib/python3.12/dist-packages (from nltk) (2025.11.3)\n",
+            "Requirement already satisfied: tqdm in /usr/local/lib/python3.12/dist-packages (from nltk) (4.67.3)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "import re\n",
+        "\n",
+        "from sklearn.datasets import fetch_20newsgroups\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+        "from sklearn.naive_bayes import MultinomialNB\n",
+        "from sklearn.metrics import accuracy_score, classification_report, confusion_matrix"
+      ],
+      "metadata": {
+        "id": "TU_BoKEhNCa5"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "categories = ['sci.space', 'rec.sport.hockey']\n",
+        "data = fetch_20newsgroups(subset='all', categories=categories)\n",
+        "texts = data.data\n",
+        "labels = data.target"
+      ],
+      "metadata": {
+        "id": "DQv4XON0NPBb"
+      },
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Show sample\n",
+        "print(\"Sample Text:\\n\", texts[0])\n",
+        "print(\"\\nLabel:\", labels[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "G7NBK1gJNf5I",
+        "outputId": "289a5ab4-f35a-44bc-cbfa-d82f4fb0bbb6"
+      },
+      "execution_count": 4,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Sample Text:\n",
+            " From: mccall@mksol.dseg.ti.com (fred j mccall 575-3539)\n",
+            "Subject: Re: Vandalizing the sky.\n",
+            "Article-I.D.: mksol.1993Apr22.204742.10671\n",
+            "Organization: Texas Instruments Inc\n",
+            "Lines: 62\n",
+            "\n",
+            "In <C5tvL2.1In@hermes.hrz.uni-bielefeld.de> hoover@mathematik.uni-bielefeld.de (Uwe Schuerkamp) writes:\n",
+            "\n",
+            ">In article <C5t05K.DB6@research.canon.oz.au> enzo@research.canon.oz.au \n",
+            ">(Enzo Liguori) writes:\n",
+            "\n",
+            ">> hideous vision of the future.  Observers were\n",
+            ">>startled this spring when a NASA launch vehicle arrived at the\n",
+            ">>pad with \"SCHWARZENEGGER\" painted in huge block letters on the\n",
+            "\n",
+            ">This is ok in my opinion as long as the stuff *returns to earth*.\n",
+            "\n",
+            ">>What do you think of this revolting and hideous attempt to vandalize\n",
+            ">>the night sky? It is not even April 1 anymore.\n",
+            "\n",
+            ">If this turns out to be true, it's time to get seriously active in\n",
+            ">terrorism. This is unbelievable! Who do those people think they are,\n",
+            ">selling every bit that promises to make money? \n",
+            "\n",
+            "Well, I guess I'm left wondering just who all the 'light fascists'\n",
+            "think *they* are.  Yes, I understand the issues.  I don't even\n",
+            "particularly care for the idea.  But am I the only one that finds the\n",
+            "sort of overreaction above just a *little* questionable?  You must\n",
+            "find things like the Moon *really* obnoxious in their pollution.\n",
+            "\n",
+            "A few questions for those frothing at the mouth to ask themselves:\n",
+            "\n",
+            "\t1) How long is this thing supposed to stay up?  Sounds like it\n",
+            "would have a *huge* drag area, not a lot of mass, and be in a fairly\n",
+            "low orbit.\n",
+            "\n",
+            "\t2) Just what orbital parameters are we talking about here?\n",
+            "What real impact are we talking about, really?  How many optical\n",
+            "astronomers are *really* going to be impacted?\n",
+            "\n",
+            "\t3) Which is more important; adding a few extra days of\n",
+            "'seeing' for (very few) optical astronomers or getting the data the\n",
+            "sensors are supposed to return along with the data for large\n",
+            "inflatables (and the potential there for an inflatable space station)?\n",
+            "The choice would seem to be one or the other, since the advertising is\n",
+            "being used to help fund this thing.\n",
+            "\n",
+            "\t4) If your answer to 3) above was \"the astronomers\", then feel\n",
+            "free to come up with some other way to fund the (to my mind) more\n",
+            "important research data that would be gained by this WITHOUT SPENDING\n",
+            "ANY MORE OF MY MONEY TO DO IT.  In other words, put up or shut up.\n",
+            "\n",
+            ">I guess we really\n",
+            ">deserve being wiped out by uv radiation, folks. \"Stupidity wins\". I\n",
+            ">guess that's true, and if only by pure numbers.\n",
+            "\n",
+            "Probably so.  I'm just not sure we agree about who the 'stupid' are. \n",
+            "\n",
+            ">\tAnother depressed planetary citizen,\n",
+            ">\thoover\n",
+            "\n",
+            "Yeah, me too.\n",
+            "\n",
+            "-- \n",
+            "\"Insisting on perfect safety is for people who don't have the balls to live\n",
+            " in the real world.\"   -- Mary Shafer, NASA Ames Dryden\n",
+            "------------------------------------------------------------------------------\n",
+            "Fred.McCall@dseg.ti.com - I don't speak for others and they don't speak for me.\n",
+            "\n",
+            "\n",
+            "Label: 1\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def preprocess(text):\n",
+        "    text = text.lower()\n",
+        "    text = re.sub(r'[^a-z\\s]', '', text)\n",
+        "    return text\n",
+        "texts = [preprocess(t) for t in texts]\n",
+        "print(\"After Preprocessing:\\n\", texts[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "3ipch-Z2NkR0",
+        "outputId": "b33c0b9e-7ea2-489f-a0f0-181ec0598ae1"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "After Preprocessing:\n",
+            " from mccallmksoldsegticom fred j mccall \n",
+            "subject re vandalizing the sky\n",
+            "articleid mksolapr\n",
+            "organization texas instruments inc\n",
+            "lines \n",
+            "\n",
+            "in ctvlinhermeshrzunibielefeldde hoovermathematikunibielefeldde uwe schuerkamp writes\n",
+            "\n",
+            "in article ctkdbresearchcanonozau enzoresearchcanonozau \n",
+            "enzo liguori writes\n",
+            "\n",
+            " hideous vision of the future  observers were\n",
+            "startled this spring when a nasa launch vehicle arrived at the\n",
+            "pad with schwarzenegger painted in huge block letters on the\n",
+            "\n",
+            "this is ok in my opinion as long as the stuff returns to earth\n",
+            "\n",
+            "what do you think of this revolting and hideous attempt to vandalize\n",
+            "the night sky it is not even april  anymore\n",
+            "\n",
+            "if this turns out to be true its time to get seriously active in\n",
+            "terrorism this is unbelievable who do those people think they are\n",
+            "selling every bit that promises to make money \n",
+            "\n",
+            "well i guess im left wondering just who all the light fascists\n",
+            "think they are  yes i understand the issues  i dont even\n",
+            "particularly care for the idea  but am i the only one that finds the\n",
+            "sort of overreaction above just a little questionable  you must\n",
+            "find things like the moon really obnoxious in their pollution\n",
+            "\n",
+            "a few questions for those frothing at the mouth to ask themselves\n",
+            "\n",
+            "\t how long is this thing supposed to stay up  sounds like it\n",
+            "would have a huge drag area not a lot of mass and be in a fairly\n",
+            "low orbit\n",
+            "\n",
+            "\t just what orbital parameters are we talking about here\n",
+            "what real impact are we talking about really  how many optical\n",
+            "astronomers are really going to be impacted\n",
+            "\n",
+            "\t which is more important adding a few extra days of\n",
+            "seeing for very few optical astronomers or getting the data the\n",
+            "sensors are supposed to return along with the data for large\n",
+            "inflatables and the potential there for an inflatable space station\n",
+            "the choice would seem to be one or the other since the advertising is\n",
+            "being used to help fund this thing\n",
+            "\n",
+            "\t if your answer to  above was the astronomers then feel\n",
+            "free to come up with some other way to fund the to my mind more\n",
+            "important research data that would be gained by this without spending\n",
+            "any more of my money to do it  in other words put up or shut up\n",
+            "\n",
+            "i guess we really\n",
+            "deserve being wiped out by uv radiation folks stupidity wins i\n",
+            "guess thats true and if only by pure numbers\n",
+            "\n",
+            "probably so  im just not sure we agree about who the stupid are \n",
+            "\n",
+            "\tanother depressed planetary citizen\n",
+            "\thoover\n",
+            "\n",
+            "yeah me too\n",
+            "\n",
+            " \n",
+            "insisting on perfect safety is for people who dont have the balls to live\n",
+            " in the real world    mary shafer nasa ames dryden\n",
+            "\n",
+            "fredmccalldsegticom  i dont speak for others and they dont speak for me\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "vectorizer = TfidfVectorizer(stop_words='english')\n",
+        "X = vectorizer.fit_transform(texts)\n",
+        "print(\"Feature Shape:\", X.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "nkuB1jOsN29_",
+        "outputId": "b86a1d5f-3a4f-416e-d4e4-d4f128d60287"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Feature Shape: (1986, 28383)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "X_train, X_test, y_train, y_test = train_test_split(\n",
+        "    X, labels, test_size=0.2, random_state=42)"
+      ],
+      "metadata": {
+        "id": "KrOdedjTN6MV"
+      },
+      "execution_count": 7,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(\"Training Samples:\", X_train.shape[0])\n",
+        "print(\"Testing Samples:\", X_test.shape[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "sPiO5xZtN_Wb",
+        "outputId": "738d4c35-6d6d-4413-844f-2234edc87e70"
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Training Samples: 1588\n",
+            "Testing Samples: 398\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "model = MultinomialNB()\n",
+        "model.fit(X_train, y_train)\n",
+        "print(\"Model Trained Successfully!\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "vaTjkJGNODm7",
+        "outputId": "a29f7264-9929-4787-c9f4-aadc7b19d938"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Model Trained Successfully!\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y_pred = model.predict(X_test)\n",
+        "print(\"Predictions done!\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "FofSh12kOGFu",
+        "outputId": "dd6eaa2e-504e-4179-d7ea-99d04700627d"
+      },
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Predictions done!\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(\"Accuracy:\", accuracy_score(y_test, y_pred))\n",
+        "print(\"\\nClassification Report:\\n\")\n",
+        "print(classification_report(y_test, y_pred))\n",
+        "print(\"\\nConfusion Matrix:\\n\")\n",
+        "print(confusion_matrix(y_test, y_pred))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "799WC26XOKhO",
+        "outputId": "ea1c9ee0-57ae-4a44-fbbf-20e4311c3898"
+      },
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Accuracy: 0.9974874371859297\n",
+            "\n",
+            "Classification Report:\n",
+            "\n",
+            "              precision    recall  f1-score   support\n",
+            "\n",
+            "           0       1.00      1.00      1.00       202\n",
+            "           1       1.00      0.99      1.00       196\n",
+            "\n",
+            "    accuracy                           1.00       398\n",
+            "   macro avg       1.00      1.00      1.00       398\n",
+            "weighted avg       1.00      1.00      1.00       398\n",
+            "\n",
+            "\n",
+            "Confusion Matrix:\n",
+            "\n",
+            "[[202   0]\n",
+            " [  1 195]]\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
